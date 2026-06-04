@@ -68,7 +68,7 @@ async def search_items(
     if owner is not None:
         stmt = stmt.where(orm_model.owner.ilike(f"%{owner}%"))
     if created_at is not None:
-        stmt = stmt.where(func.date(orm_model.create_time) == created_at)
+        stmt = stmt.where(func.date(orm_model.created_at) == created_at)
     result = await session.execute(stmt)
     items = result.scalars().all()
     return list(items)

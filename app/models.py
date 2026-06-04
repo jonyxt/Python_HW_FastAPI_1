@@ -19,5 +19,5 @@ class Advertisement(Base):
             'description': self.description,
             'price': self.price,
             'owner': self.owner,
-            'created_at': self.create_time.isoformat() if self.created_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
