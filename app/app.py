@@ -1,11 +1,12 @@
 # app/app.py
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Query
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import date
 from lifespan import lifespan
 from dependencies import get_db_session
-from services import add_item, get_item, update_item, delete_item, get_item_by_qs
+from services import add_item, get_item, update_item, delete_item, search_items
 import models, schemas
 
 
@@ -27,6 +28,30 @@ async def create_adv(
     new_adv = await add_item(session, models.Advertisement, adv_data)
     return schemas.CreateAdvResponse(id=new_adv.id)
 
+@app.get(
+    "/advertisement",
+    response_model=list[schemas.GetAdvResponse],
+    summary="Поиск объявлений по полям",
+)
+async def search_adv(
+        session: SessionDep,
+        title: str | None = Query(default=None),
+        description: str | None = Query(default=None),
+        price: int | None = Query(default=None),
+        owner: str | None = Query(default=None),
+        created_at: date | None = Query(default=None),
+):
+    advs = await search_items(
+        session=session,
+        orm_model=models.Advertisement,
+        title=title,
+        description=description,
+        price=price,
+        owner=owner,
+        created_at=created_at,
+    )
+
+    return [schemas.GetAdvResponse(**adv.to_dict()) for adv in advs]
 
 @app.get("/advertisement/{advertisement_id}",
          response_model=schemas.GetAdvResponse,
@@ -39,17 +64,6 @@ async def get_adv(
     adv = await get_item(session, models.Advertisement, advertisement_id)
     # Преобразуем ORM-модель в словарь и затем в Pydantic-схему
     return schemas.GetAdvResponse(**adv.to_dict())
-
-@app.get('/advertisement',
-         response_model=schemas.GetAdvResponse,
-         summary='Получить объявление по полям')
-async def get_adv_by_qs(
-        query_string: str,
-        session: SessionDep
-):
-    advs = await get_item_by_qs(session, models.Advertisement, query_string)
-    return [schemas.GetAdvResponse(**adv.to_dict()) for adv in advs]
-
 
 @app.patch("/advertisement/{advertisement_id}", response_model=schemas.UpdateAdvResponse, summary="Обновить объявление")
 async def update_adv(

@@ -17,7 +17,7 @@ class GetAdvResponse(BaseModel):
     description: str
     price: int
     owner: str
-    create_time: str
+    created_at: str
 
 class UpdateAdvRequest(BaseModel):
     title: str | None = None
@@ -31,7 +31,7 @@ class UpdateAdvResponse(BaseModel):
     description: str
     price: int
     owner: str
-    create_time: str
+    created_at: str
 
 class OKResponse(BaseModel):
     status: str = 'ok'

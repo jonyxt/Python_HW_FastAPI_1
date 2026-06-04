@@ -1,7 +1,8 @@
 # app/services.py
 from asyncpg.exceptions import UniqueViolationError
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_
+from datetime import date
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,27 +49,28 @@ async def get_item(
         )
     return item
 
-async def get_item_by_qs(
+async def search_items(
         session: AsyncSession,
         orm_model: type[models.Advertisement],
-        query_string: str
+        title: str | None = None,
+        description: str | None = None,
+        price: int | None = None,
+        owner: str | None = None,
+        created_at: date | None = None,
 ) -> list[models.Advertisement]:
-    search_pattern = f"%{query_string}%"
-    conditions = [
-        orm_model.title.ilike(search_pattern),
-        orm_model.description.ilike(search_pattern),
-        orm_model.owner.ilike(search_pattern),
-    ]
-    if query_string.isdigit():
-        conditions.append(orm_model.price == int(query_string))
-    stmt = select(orm_model).where(or_(*conditions))
+    stmt = select(orm_model)
+    if title is not None:
+        stmt = stmt.where(orm_model.title.ilike(f"%{title}%"))
+    if description is not None:
+        stmt = stmt.where(orm_model.description.ilike(f"%{description}%"))
+    if price is not None:
+        stmt = stmt.where(orm_model.price == price)
+    if owner is not None:
+        stmt = stmt.where(orm_model.owner.ilike(f"%{owner}%"))
+    if created_at is not None:
+        stmt = stmt.where(func.date(orm_model.create_time) == created_at)
     result = await session.execute(stmt)
     items = result.scalars().all()
-    if not items:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{orm_model.__name__} with query string {query_string} not found"
-        )
     return list(items)
 
 async def update_item(
